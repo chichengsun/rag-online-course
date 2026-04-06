@@ -1,0 +1,11 @@
+---
+alwaysApply: true
+---
+- 在进行代码设计或重构时，`handler`、`service`、`repository` 按领域对象组织，避免把多个对象职责堆叠到单个大类中。
+- 对象示例：`User`、`Course`、`Chapter`、`Resource`、`Enrollment`、`Catalog`、`Progress`。
+- 新增或修改代码时，同步补充中文注释，至少覆盖：
+  - 类型（struct/interface）职责说明；
+  - 构造函数用途；
+  - 对外方法的业务语义与关键约束。
+- 注释要求简洁、准确，避免空泛描述与过度重复。
+- 日志字段优先记录业务关键内容（参数、关键状态、结果、错误），避免无业务价值的结构性噪音字段。

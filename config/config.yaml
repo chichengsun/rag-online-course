@@ -1,0 +1,117 @@
+server:
+  port: "8080"
+
+logging:
+  level: "info"
+
+postgres:
+  host: "localhost"
+  port: 5432
+  user: "postgres"
+  password: "postgres"
+  database: "online_course"
+  sslmode: "disable"
+  max_open_conns: 30
+  max_idle_conns: 10
+  conn_max_idle_min: 15
+  conn_max_lifetime_min: 60
+
+redis:
+  addr: "localhost:6379"
+  db: 0
+
+jwt:
+  issuer: "online-course"
+  access_secret: "replace-me-access"
+  refresh_secret: "replace-me-refresh"
+  access_ttl_min: 60
+  refresh_ttl_min: 10080
+
+# 多模态解析网关。make dev 会启动 docreader-http 映射宿主机 8090，本地 Go 直连即可。
+# 若 Go 也跑在 compose 网络内，可改为 http://docreader-http:8080。
+docreader:
+  base_url: "http://localhost:8090"
+  internal_token: ""
+  timeout_seconds: 600
+  # 教师解析资源时是否向 docreader 传 use_ocr（网关需配置 OCR_BACKEND=tesseract 等方生效）
+  use_ocr: true
+
+minio:
+  endpoint: "localhost:9000"
+  access_key: "minioadmin"
+  secret_key: "minioadmin"
+  use_ssl: false
+  bucket: "course-resources"
+  # 与 endpoint 相同时可省略；若后端在容器内用 minio:9000，此处填宿主机可访问地址，便于入库的 object_url 在浏览器中打开。
+  public_base_url: "http://localhost:9000"
+  # 本地开发允许匿名读取对象，解决私有桶直链 AccessDenied；生产务必改为 false 并走预签名或受控下载接口。
+  public_read: true
+
+rag:
+  # 模型必须严格依赖检索内容回答；fallback 会在服务层替换到 {{fallback_answer}}。
+  qa_system_prompt: |
+    ## 角色
+    你是课程知识库问答助手，只能基于提供的课程检索上下文回答问题。
+
+    ## 问题
+    用户会给出当前提问，以及若干编号的检索上下文块。
+
+    ## 目标
+    给出准确、简洁、可执行的答案；当证据不足时，不臆造事实。
+
+    ## 要求
+    - 仅可使用检索上下文中的事实，不得引入上下文外信息。
+    - 若上下文不足以回答，必须原样回复：{{fallback_answer}}。
+    - 不要在正文中输出引用序号（如 [1][2]），也不要粘贴大段原文。
+    - 若有结论冲突，优先采用更具体、更新、与问题更直接相关的片段。
+  fallback_answer: "我在当前课程知识库中找不到足够依据，请补充资料或换个问法。"
+  # 意图识别：仅输出 simple 或 rag。
+  intent_system_prompt: |
+    ## 角色
+    你是对话意图分类器。
+
+    ## 问题
+    输入包含历史对话与当前问题，需要判断本轮应走 simple 还是 rag。
+
+    ## 目标
+    输出最稳定、最可执行的路由决策，避免误分流。
+
+    ## 要求
+    - 只能输出一个小写词：simple 或 rag，禁止输出其他文本。
+    - simple：通用常识、闲聊、无需课程知识库即可回答。
+    - rag：需要课程资料、术语定义、课程细节或证据支撑才能回答。
+    - 若不确定，默认输出 rag。
+  # RAG 检索前改写查询。
+  rewrite_system_prompt: |
+    ## 角色
+    你是检索查询改写器。
+
+    ## 问题
+    输入包含历史对话与当前问题，需要产出更适合检索的查询。
+
+    ## 目标
+    在不改变用户意图的前提下，提高语义检索与关键词检索召回率。
+
+    ## 要求
+    - 只输出一条改写后的查询文本，不要输出解释。
+    - 保留关键实体、课程术语、约束条件（时间、版本、范围等）。
+    - 去除无信息量口语与礼貌语，避免过度扩写。
+    - 如当前问题依赖历史指代，需补全指代对象。
+  # 对改写问题进行分词关键词抽取，用于关键词检索。
+  keyword_system_prompt: |
+    ## 角色
+    你是检索关键词分解器。
+
+    ## 问题
+    输入是一条已改写后的检索问题，需要产出用于关键词检索的分词关键词。
+
+    ## 目标
+    输出高召回且低噪音的关键词集合，覆盖核心实体、术语与约束词。
+
+    ## 要求
+    - 仅输出关键词列表，不要解释。
+    - 输出格式必须是 JSON 数组字符串，例如：["goroutine","调度","GPM"]。
+    - 关键词数量控制在 3~8 个。
+    - 保留专有名词、英文缩写、数字版本信息。
+  # simple 路径的系统提示词（不走检索）。
+  simple_qa_system_prompt: "你是通用问答助手，请直接回答用户问题。"
