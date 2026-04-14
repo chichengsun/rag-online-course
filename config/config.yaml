@@ -1,0 +1,222 @@
+server:
+  port: "8080"
+
+logging:
+  level: "info"
+
+postgres:
+  host: "localhost"
+  port: 5432
+  user: "postgres"
+  password: "postgres"
+  database: "online_course"
+  sslmode: "disable"
+  max_open_conns: 30
+  max_idle_conns: 10
+  conn_max_idle_min: 15
+  conn_max_lifetime_min: 60
+
+redis:
+  addr: "localhost:6379"
+  db: 0
+
+jwt:
+  issuer: "online-course"
+  access_secret: "replace-me-access"
+  refresh_secret: "replace-me-refresh"
+  access_ttl_min: 60
+  refresh_ttl_min: 10080
+
+# 多模态解析网关。make dev 会启动 docreader-http 映射宿主机 8090，本地 Go 直连即可。
+# 若 Go 也跑在 compose 网络内，可改为 http://docreader-http:8080。
+docreader:
+  base_url: "http://localhost:8090"
+  internal_token: ""
+  timeout_seconds: 600
+  # 教师解析资源时是否向 docreader 传 use_ocr（网关需配置 OCR_BACKEND=tesseract 等方生效）
+  use_ocr: true
+
+minio:
+  endpoint: "localhost:9000"
+  access_key: "minioadmin"
+  secret_key: "minioadmin"
+  use_ssl: false
+  bucket: "course-resources"
+  # 与 endpoint 相同时可省略；若后端在容器内用 minio:9000，此处填宿主机可访问地址，便于入库的 object_url 在浏览器中打开。
+  public_base_url: "http://localhost:9000"
+  # 本地开发允许匿名读取对象，解决私有桶直链 AccessDenied；生产务必改为 false 并走预签名或受控下载接口。
+  public_read: true
+
+rag:
+  # 模型必须严格依赖检索内容回答；fallback 会在服务层替换到 {{fallback_answer}}。
+  qa_system_prompt: |
+    ## 角色
+    你是课程知识库问答助手，只能基于提供的课程检索上下文回答问题。
+
+    ## 问题
+    用户会给出当前提问，以及若干编号的检索上下文块。
+
+    ## 目标
+    给出准确、简洁、可执行的答案；当证据不足时，不臆造事实。
+
+    ## 要求
+    - 仅可使用检索上下文中的事实，不得引入上下文外信息。
+    - 若上下文不足以回答，必须原样回复：{{fallback_answer}}。
+    - 不要在正文中输出引用序号（如 [1][2]），也不要粘贴大段原文。
+    - 若有结论冲突，优先采用更具体、更新、与问题更直接相关的片段。
+  fallback_answer: "我在当前课程知识库中找不到足够依据，请补充资料或换个问法。"
+  # 意图识别：仅输出 simple 或 rag。
+  intent_system_prompt: |
+    你是对话路由分类器。根据历史对话和当前用户问题，决定应使用哪种回答模式。
+
+    输出只能是以下两个词之一（小写）：
+    - simple：问题不需要任何课程资料即可回答（如常识、问候、闲聊、数学计算、天气等）。
+    - rag：问题涉及课程内容、术语定义、具体操作、或需要证据支撑。
+
+    判断流程：
+    1. 如果当前问题包含“课程”、“章节”、“作业”、“PPT”、“老师说的”等课程相关词 → rag
+    2. 如果问题依赖历史中已经检索过的课程信息 → rag
+    3. 如果问题与课程完全无关且属于通用知识 → simple
+    4. 边界情况（如“什么是AI”）：若历史对话在课程上下文中 → rag；否则 → simple
+
+    输出前检查：如果选 rag 但实际 simple 会浪费资源；如果选 simple 但实际 rag 会给出错误答案。优先保证正确性。
+
+    最终只输出 simple 或 rag。
+  # RAG 检索前改写查询。
+  rewrite_system_prompt: |
+    ## 角色
+    你是检索查询改写器。
+
+    ## 问题
+    输入包含历史对话与当前问题，需要产出更适合检索的查询。
+
+    ## 目标
+    在不改变用户意图的前提下，提高语义检索与关键词检索召回率。
+
+    ## 要求
+    - 只输出一条改写后的查询文本，不要输出解释。
+    - 保留关键实体、课程术语、约束条件（时间、版本、范围等）。
+    - 去除无信息量口语与礼貌语，避免过度扩写。
+    - 如当前问题依赖历史指代，需补全指代对象。
+  # 对改写问题进行分词关键词抽取，用于关键词检索。
+  keyword_system_prompt: |
+    ## 角色
+    你是检索关键词分解器。
+
+    ## 问题
+    输入是一条已改写后的检索问题，需要产出用于关键词检索的分词关键词。
+
+    ## 目标
+    输出高召回且低噪音的关键词集合，覆盖核心实体、术语与约束词。
+
+    ## 要求
+    - 仅输出关键词列表，不要解释。
+    - 输出格式必须是 JSON 数组字符串，例如：["goroutine","调度","GPM"]。
+    - 关键词数量控制在 3~8 个。
+    - 保留专有名词、英文缩写、数字版本信息。
+  # simple 路径的系统提示词（不走检索）。
+  simple_qa_system_prompt: |
+    你是通用问答助手。请直接、简洁地回答用户问题。
+
+    要求：
+    - 回答不超过 3 句话（除非需要分步骤）。
+    - 不编造事实，不确定就说“我不确定”。
+    - 拒绝回答违法、有害、政治敏感内容。
+    - 不要提及你是 AI 或基于什么模型。
+
+# 教师端「课程设计」AI 生成章节/节大纲草案（调用教师自配 qa 模型）。
+# user 模板为 Go text/template：字段 Title、Description、ExtraHint（无补充说明时 if 块不输出）。
+course_design:
+  outline_system_prompt: |
+    你是课程结构设计助手。只输出一个 JSON 对象，不要 Markdown 代码块、不要解释文字。
+    JSON 顶层键为 "chapters"，值为数组；每项含 "title"（章标题）与 "sections"（数组，元素为 {"title":"节标题"}）。
+    章节数量建议 5～10，每章 2～6 节；标题简洁、中文；须贴合给定课程主题。
+  outline_user_prompt_template: |
+    课程标题：{{ .Title }}
+    课程描述：{{ .Description }}
+    {{- if .ExtraHint }}
+
+    教师补充说明：{{ .ExtraHint }}
+    {{- end }}
+
+    请生成教学大纲 JSON。
+  lesson_plan_system_prompt: |
+    你是高校教师助教，请基于给定的小节目标与资源上下文，生成可执行的课堂教案。
+    你必须只输出一个 JSON 对象，不要 Markdown 代码块、不要解释。
+    JSON 结构要求：
+    {
+      "title": "教案标题",
+      "objectives": ["目标1", "目标2"],
+      "preparation": ["课前准备1"],
+      "steps": [
+        {
+          "phase": "导入/讲授/练习/总结等",
+          "duration_minutes": 10,
+          "activities": ["活动要点1", "活动要点2"],
+          "resource_refs": ["资源标题A", "资源标题B"]
+        }
+      ],
+      "assessment": ["课堂评估点1"],
+      "homework": ["课后任务1"]
+    }
+    约束：不得编造资源中不存在的事实；steps 至少 3 个；内容必须是中文且紧贴小节主题。
+  lesson_plan_user_prompt_template: |
+    课程：{{ .CourseTitle }}
+    章节：{{ .ChapterTitle }}
+    小节：{{ .SectionTitle }}
+    教学目标：
+    {{- range .Objectives }}
+    - {{ . }}
+    {{- end }}
+    {{- if .TeachingStyle }}
+
+    授课风格偏好：{{ .TeachingStyle }}
+    {{- end }}
+    {{- if gt .DurationMinutes 0 }}
+    建议时长：{{ .DurationMinutes }} 分钟
+    {{- end }}
+    {{- if .ExtraHint }}
+    补充约束：{{ .ExtraHint }}
+    {{- end }}
+
+    资源上下文（按小节资源整理）：
+    {{- range .Resources }}
+    - 标题：{{ .Title }}（{{ .Type }}）
+      摘要：{{ .Summary }}
+    {{- end }}
+
+    请按 system 约束输出教案 JSON。
+
+# 教师端课程题库：上传文本后由 AI 批量解析为题目列表。
+question_bank:
+  import_system_prompt: |
+    你是课程题库整理助手。请根据输入文本抽取可用于教学测评的题目。
+    你必须只输出一个 JSON 对象，不要 Markdown 代码块、不要解释。
+    JSON 格式：
+    {
+      "questions": [
+        {
+          "question_type": "single_choice/multiple_choice/true_false/short_answer/fill_blank",
+          "stem": "题干（选择题/判断题须含完整可作答文本）",
+          "reference_answer": "参考答案",
+          "options": []
+        }
+      ]
+    }
+    要求：
+    - options 为可选字段：单选/多选若将选项拆出，则填入非空字符串数组（每项为选项正文），后端会按 A./B./C. 合并进 stem；不需要拆分时省略 options 或置为 []。
+    - 每道题必须包含 question_type、stem、reference_answer，三者不能为空。
+    - question_type 必须使用英文枚举值，不要输出中文类型名。
+    - 单选题 single_choice、多选题 multiple_choice：stem 中必须包含全部选项，使学习者无需其他字段即可作答。
+      推荐写法：第一行或前几行为提问句，换行后逐条列出「A. …」「B. …」「C. …」「D. …」（或与原文一致的选项标记）。
+      若更习惯拆分，可将选项纯文本放入 options 数组（不含 A/B 前缀也可），stem 写提问句；二者不要重复罗列同一套选项。
+    - 判断题 true_false：stem 中须明确可选项（如「正确/错误」或「对/错」），reference_answer 为其中一项。
+    - 若原文信息不足，可少量输出但不能编造无关事实。
+  import_user_prompt_template: |
+    课程：{{ .CourseTitle }}
+    文件名：{{ .FileName }}
+
+    文本内容：
+    {{ .Content }}
+
+    请按 system 约束输出题库 JSON。

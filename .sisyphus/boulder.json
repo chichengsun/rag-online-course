@@ -1,0 +1,112 @@
+{
+  "active_plan": "/Users/is_coward/code/person-code/go-code/rag-online-course/.sisyphus/plans/frontend-redesign.md",
+  "started_at": "2026-04-12T12:29:08.874Z",
+  "session_ids": [
+    "ses_27e6e15c0ffeIdTQ3y2C9cwfBz",
+    "ses_27d9aab52ffemPONdzXfZQQXEd",
+    "ses_27d9aaa45ffeMVHanbrHfQ4TpS",
+    "ses_27d9aa938ffeVDSk5YPzeYRZH1",
+    "ses_27d9aa825ffeZ9MQWmZXGVOPqt"
+  ],
+  "session_origins": {
+    "ses_27e6e15c0ffeIdTQ3y2C9cwfBz": "direct",
+    "ses_27d9aab52ffemPONdzXfZQQXEd": "appended",
+    "ses_27d9aaa45ffeMVHanbrHfQ4TpS": "appended",
+    "ses_27d9aa938ffeVDSk5YPzeYRZH1": "appended",
+    "ses_27d9aa825ffeZ9MQWmZXGVOPqt": "appended"
+  },
+  "plan_name": "frontend-redesign",
+  "agent": "atlas",
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "**项目初始化 + 配置**",
+      "session_id": "ses_27e535e79ffeu8vjE6gFQJzc0l",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-04-12T12:36:20.864Z"
+    },
+    "todo:2": {
+      "task_key": "todo:2",
+      "task_label": "2",
+      "task_title": "**shadcn/ui集成 + Tailwind配置**",
+      "session_id": "ses_27e4bba49ffek1So6bFj2INR4z",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-04-12T12:57:08.137Z"
+    },
+    "todo:3": {
+      "task_key": "todo:3",
+      "task_label": "3",
+      "task_title": "**TypeScript类型定义**",
+      "session_id": "ses_27e38b261ffePtMK76zkGredSI",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-04-12T13:04:59.473Z"
+    },
+    "todo:8": {
+      "task_key": "todo:8",
+      "task_label": "8",
+      "task_title": "**认证服务层（auth service）**",
+      "session_id": "ses_27e2c86f9ffef7X1w1HDPK41AT",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-04-12T13:18:35.752Z"
+    },
+    "todo:15": {
+      "task_key": "todo:15",
+      "task_label": "15",
+      "task_title": "**共享UI组件（Button, Card, Input等）**",
+      "session_id": "ses_27e209d56ffezWWNGsGe6dpwFP",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-04-12T13:33:21.833Z"
+    },
+    "todo:21": {
+      "task_key": "todo:21",
+      "task_label": "21",
+      "task_title": "**登录/注册页面（AuthPage）**",
+      "session_id": "ses_27e179e9bffel3tKhq0MQWzAWJ",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-04-12T13:45:49.937Z"
+    },
+    "todo:22": {
+      "task_key": "todo:22",
+      "task_label": "22",
+      "task_title": "**课程列表页（TeacherCoursesPage）**",
+      "session_id": "ses_27e0da0a8ffeLmqtMlK7Gv0OQ4",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-04-12T13:52:29.170Z"
+    },
+    "todo:23": {
+      "task_key": "todo:23",
+      "task_label": "23",
+      "task_title": "**课程创建/编辑**",
+      "session_id": "ses_27e0825f8ffe2sK4lzfGSy7Gul",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-04-12T14:05:01.133Z"
+    },
+    "todo:27": {
+      "task_key": "todo:27",
+      "task_label": "27",
+      "task_title": "**资源预览页（PDF/Video/Audio）**",
+      "session_id": "ses_27dd67b3effeMy27iXJ4f1UIZl",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-04-12T15:17:32.765Z"
+    },
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "**Plan Compliance Audit** — `oracle`",
+      "session_id": "ses_27d9aa825ffeZ9MQWmZXGVOPqt",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-04-12T15:53:02.370Z"
+    }
+  }
+}
